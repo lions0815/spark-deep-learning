@@ -71,20 +71,11 @@ You can also post bug reports and feature requests in Github issues.
 
 
 ## Releases
-- [1.0.0](https://github.com/databricks/spark-deep-learning/releases/tag/v1.0.0) release: Spark 2.3.0 required. Python 3.6 & Scala 2.11 recommended. TensorFlow 1.6.0 required.
-    1. Using the definition of images from Spark 2.3.0. The new definition uses the BGR channel ordering 
-       for 3-channel images instead of the RGB ordering used in this project before the change. 
-    2. Persistence for DeepImageFeaturizer (both Python and Scala).
-- [0.3.0](https://github.com/databricks/spark-deep-learning/releases/tag/v0.3.0) release: Spark 2.2.0, Python 3.6 & Scala 2.11 recommended. TensorFlow 1.4.1- required.
-    1. KerasTransformer & TFTransformer for large-scale batch inference on non-image (tensor) data.
-    2. Scala API for transfer learning (`DeepImageFeaturizer`). InceptionV3 is supported.
-    3. Added VGG16, VGG19 models to DeepImageFeaturizer & DeepImagePredictor (Python).
-- [0.2.0](https://github.com/databricks/spark-deep-learning/releases/tag/v0.2.0) release: Spark 2.1.1 & Python 2.7 recommended.
-    1. KerasImageFileEstimator API (train a Keras model on image files)
-    2. SQL UDF support for Keras models
-    3. Added Xception, Resnet50 models to DeepImageFeaturizer & DeepImagePredictor.
-- 0.1.0 Alpha release: Spark 2.1.1 & Python 2.7 recommended.
+Visit [Github Release Page](https://github.com/databricks/spark-deep-learning/releases) to check the release notes.
 
+## Downloads and installation
+
+Deep Learning Pipelines is published as a Spark Package.  Visit the [Spark Package page](https://spark-packages.org/package/databricks/spark-deep-learning) to download releases and find instructions for use with spark-shell, SBT, and Maven.
 
 ## Quick user guide
 
@@ -101,7 +92,9 @@ To try running the examples below, check out the Databricks notebook in the [Dat
 [0.1.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5669198905533692/3647723071348946/3983381308530741/latest.html),
 [0.2.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/5669198905533692/1674891575666800/3983381308530741/latest.html),
 [0.3.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/4856334613426202/3381529530484660/4079725938146156/latest.html),
-[1.0.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/6026450283250196/3874201704285756/7409402632610251/latest.html).
+[1.0.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/6026450283250196/3874201704285756/7409402632610251/latest.html),
+[1.1.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/6026450283250196/3874201704285756/7409402632610251/latest.html),
+[1.2.0](https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/6026450283250196/2720471487429801/7409402632610251/latest.html).
 
 ### Working with images in Spark
 
@@ -153,6 +146,13 @@ evaluator = MulticlassClassificationEvaluator(metricName="accuracy")
 print("Training set accuracy = " + str(evaluator.evaluate(predictionAndLabels)))
 ```
 
+`DeepImageFeaturizer` supports the following models from Keras:
+
+* InceptionV3
+* Xception
+* ResNet50
+* VGG16
+* VGG19
 
 ### Distributed hyperparameter tuning
 
@@ -226,20 +226,24 @@ There are many well-known deep learning models for images. If the task at hand i
 
 
 ```python
-from sparkdl import readImages, DeepImagePredictor
+from pyspark.ml.image import ImageSchema
+from sparkdl import DeepImagePredictor
 
-image_df = readImages(sample_img_dir)
+image_df = ImageSchema.readImages(sample_img_dir)
 
 predictor = DeepImagePredictor(inputCol="image", outputCol="predicted_labels", modelName="InceptionV3", decodePredictions=True, topK=10)
 predictions_df = predictor.transform(image_df)
 ```
+
+`DeepImagePredictor` supports the same set of models from Keras as `DeepImageFeaturizer`.  (See above.)
 
 ##### For TensorFlow users
 Deep Learning Pipelines provides an MLlib Transformer that will apply the given TensorFlow Graph to a DataFrame containing a column of images (e.g. loaded using the utilities described in the previous section). Here is a very simple example of how a TensorFlow Graph can be used with the Transformer. In practice, the TensorFlow Graph will likely be restored from files before calling `TFImageTransformer`.
 
 
 ```python
-from sparkdl import readImages, TFImageTransformer
+from pyspark.ml.image import ImageSchema
+from sparkdl import TFImageTransformer
 import sparkdl.graph.utils as tfx  # strip_and_freeze_until was moved from sparkdl.transformers to sparkdl.graph.utils in 0.2.0
 from sparkdl.transformers import utils
 import tensorflow as tf
@@ -255,7 +259,7 @@ transformer = TFImageTransformer(inputCol="image", outputCol="predictions", grap
                                  inputTensor=image_arr, outputTensor=resized_images,
                                  outputMode="image")
 
-image_df = readImages(sample_img_dir)
+image_df = ImageSchema.readImages(sample_img_dir)
 processed_image_df = transformer.transform(image_df)
 ```
 
@@ -456,9 +460,9 @@ registerKerasImageUDF("inceptionV3_udf_with_preprocessing", InceptionV3(weights=
 Once a UDF has been registered, it can be used in a SQL query, e.g.
 
 ```python
-from sparkdl import readImages
+from pyspark.ml.image import ImageSchema
 
-image_df = readImages(sample_img_dir)
+image_df = ImageSchema.readImages(sample_img_dir)
 image_df.registerTempTable("sample_images")
 ```
 
